@@ -15,6 +15,9 @@ COLOROFF=$(tput sgr0)
 FIX_USER=NO # This chop user to 8 caracteres and remove characters ._-
 TIME=$(date +%T)
 DATE=$(date +%F)
+SSH="ssh -p $SSHPORT -oStrictHostKeyChecking=no -oConnectTimeout=10 -oBatchMode=yes root@${IP}"
+RSYNC="rsync -av"
+REMOTE_MYSQL='/usr/bin/mariadb'
 
 
 # FUNCTIONS ================================================================================================
@@ -86,7 +89,11 @@ HEVE_DB() {
 	done
 	
 	printf "%sINFO:%s Copy db.conf to remote\n" $GREEN $COLOROFF
-	$RSYNC $BACKUPDIR/${PLESKSUS}/DBS/db.conf root@${IP}:/usr/local/${PANEL}/data/users/${USER}/db.conf
+	$RSYNC $BACKUPDIR/${PLESKSUS}/DBS/db.conf root@${IP}:/usr/local/${PANEL}/data/users/${USER}/db.conf |
+	while read sk_file_dm; do
+		sk_sync=$((sk_sync+1))
+		echo -en "-- $sk_sync db.conf sent\r"
+	done
 	$SSH ${PANELBIN}v-rebuild-databases $USER
 	rm -f $BACKUPDIR/${PLESKSUS}/DBS/db.conf
 	printf "%sINFO:%s Trasfering and Restoring databases.\n" $GREEN $COLOROFF
@@ -95,10 +102,10 @@ HEVE_DB() {
 	for DB in $DBS
 	do
 		printf "%sINFO:%s Copy %s Database\n" $GREEN $COLOROFF $DB
-		$RSYNC --progress -e "ssh -p $SSHPORT" $BACKUPDIR/${PLESKSUS}/DBS/${USER}_${DB} root@${IP}:/root/tmp_heve_transfer
+		$RSYNC --progress $BACKUPDIR/${PLESKSUS}/DBS/${USER}_${DB} root@${IP}:/root/tmp_heve_transfer
 		printf "%sINFO:%s Restore %s Database\n" $GREEN $COLOROFF $DB
 		# DB=$(echo ${USER}_${DB} ) # fixed problem with ssh import
-		$SSH "mysql ${USER}_${DB}  < /root/tmp_heve_transfer/${USER}_${DB} "
+		$SSH "${REMOTE_MYSQL} ${USER}_${DB}  < /root/tmp_heve_transfer/${USER}_${DB} "
 		CHECK_STATUS $? "RESTORE_DATABASE" "YES"
 		$SSH rm -f /root/tmp_heve_transfer/${USER}_${DB}
 	done
@@ -259,8 +266,6 @@ fi
 PLESKSUS=$2
 IP=$3
 USER=${4:-pleskuser}
-SSH="ssh -p $SSHPORT -oStrictHostKeyChecking=no -oConnectTimeout=10 -oBatchMode=yes root@${IP}"
-RSYNC="rsync -av"
 
 if [[ ! -d "$BACKUPDIR" ]]; then
     mkdir -p "BACKUPDIR"
