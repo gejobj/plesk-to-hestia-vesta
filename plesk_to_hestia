@@ -122,9 +122,10 @@ HEVE_DB() {
 		echo -en "-- $sk_file_dm\r"
 	done
 	echo " "
-	printf "%sWARN:%s DBS migrated, please run  in %s :\n bash fix-db-relation %s
-	This will FIX database name and user in most common CMS
-	\n" $YEL $COLOROFF  $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	
+	printf "%sWARN:%s DBS migrated, please run  in %s:\n bash fix-db-relation %s" $YEL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	printf "This will FIX database name and user in most common CMS\n"
+	
 }
 
 HEVE_MAIL() {
