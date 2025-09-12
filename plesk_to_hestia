@@ -93,6 +93,7 @@ HEVE_DB() {
 		sk_sync=$((sk_sync+1))
 		echo -en "-- $sk_sync db.conf sent\r"
 	done
+	echo " "
 	$SSH ${PANELBIN}v-rebuild-databases $USER
 	rm -f $BACKUPDIR/${PLESKSUS}/DBS/db.conf
 	printf "%sINFO:%s Trasfering and Restoring databases.\n" $GREEN $COLOROFF
@@ -101,7 +102,11 @@ HEVE_DB() {
 	for DB in $DBS
 	do
 		printf "%sINFO:%s Copy %s Database\n" $GREEN $COLOROFF $DB
-		$RSYNC --progress $BACKUPDIR/${PLESKSUS}/DBS/${USER}_${DB} root@${IP}:/root/tmp_heve_transfer
+		$RSYNC --progress $BACKUPDIR/${PLESKSUS}/DBS/${USER}_${DB} root@${IP}:/root/tmp_heve_transfer |
+		while read sk_file_dm; do
+			echo -en "-- $sk_file_dm\r"
+		done
+		echo " "
 		printf "%sINFO:%s Restore %s Database\n" $GREEN $COLOROFF $DB
 		# DB=$(echo ${USER}_${DB} ) # fixed problem with ssh import
 		$SSH "${REMOTE_MYSQL} ${USER}_${DB}  < /root/tmp_heve_transfer/${USER}_${DB} "
@@ -112,7 +117,11 @@ HEVE_DB() {
 	$SSH ${PANELBIN}v-rebuild-databases $USER
 	#### TODO fix most common CMS configuration files..
 	printf "%sINFO:%s Transfer DB Relation Files to %s \n" $GREEN $COLOROFF $IP
-	$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root
+	$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root |
+	while read sk_file_dm; do
+		echo -en "-- $sk_file_dm\r"
+	done
+	echo " "
 	printf "%sWARN:%s DBS migrated, please run  in %s :\n bash fix-db-relation %s
 	This will FIX database name and user in most common CMS
 	\n" $YEL $COLOROFF  $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
@@ -148,11 +157,11 @@ HEVE_DOMAIN(){
 	CHECK_STATUS $? "ADD-REMOTE-DOMAIN" "YES"
 	printf "%sINFO:%s Copy Files from %s \n" $GREEN $COLOROFF $FILESIN
 	$RSYNC $FILESIN/ root@${IP}:/home/${USER}/web/${PLESKSUS}/public_html 2>&1 |
-		while read sk_file_dm; do
-			sk_sync=$((sk_sync+1))
-			printf "\r%sINFO:%s Importing -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
-		done
-		printf "\n"
+	while read sk_file_dm; do
+		sk_sync=$((sk_sync+1))
+		printf "\r%sINFO:%s Importing -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
+	done
+	printf "\n"
 }
 
 HEVE_SUBS() {
@@ -244,10 +253,10 @@ TRANSFER () {
 		printf "%sTransfer DB Relation Files to %s %s\n" $YELL $IP $COLOROFF
 		$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root
 		
-		printf "%s###################
-		DBS migrated, please run fix-db-relation  in %s :\n bash fix-db-relation %s
-		This will FIX database name and user in most common CMS
-		################### %s\n" $RED $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix" $COLOROFF
+		printf "%s###################\n" $RED
+		printf "DBS migrated, please run fix-db-relation in %s: bash fix-db-relation %s\n" $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+		printf "This will FIX database name and user in most common CMS\n"
+		printf "################### %s\n" $COLOROFF
 	
 	fi
 }
