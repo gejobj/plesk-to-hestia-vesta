@@ -141,8 +141,8 @@ HEVE_MAIL() {
 			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
-			printf "%sINFO:%s Creating email forward %s\n" $GREEN $COLOROFF $EMAIL
 			EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
+			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
 			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		else
