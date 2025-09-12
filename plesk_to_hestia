@@ -135,20 +135,23 @@ HEVE_MAIL() {
 	do
 		USERMAIL=$(echo $EMAIL | awk -F '@' '{ print $1 }')
 		EMAILPASS=$(/usr/local/psa/admin/bin/mail_auth_view | awk -v EMAIL="$EMAIL" '$2 ~ EMAIL { print $5 }')
-		# IF EMAILPASS -> Email forward
+		HAS_MAILBOX=$(plesk bin mail --info $EMAIL | grep "^Mailbox" | awk '{ print $2 }')
+		HAS_FORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
+		
+		# IF EMAILPASS EMPTY
 		if [ -z "${EMAILPASS}" ]; then
 			GEN_PASS
 			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
-			EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
-			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
-			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
-			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		else
 			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $EMAILPASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
+		fi
+		
+		# SYNC EMAILS
+		if [ $HAS_MAILBOX == "true" ]; then
 			printf "%sINFO:%s Sync %s@%s\n" $GREEN $COLOROFF $USERMAIL $PLESKSUS
 			#/home/tr43dsd/mail/barcelonabeach.net/fortls
 			$RSYNC ${MAILSIN}${PLESKSUS}/${USERMAIL}/Maildir/ root@${IP}:/home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ 2>&1 |
@@ -159,6 +162,15 @@ HEVE_MAIL() {
 			echo " "
 			$SSH "chown ${USER}:mail /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ -R"
 		fi
+		
+		# CREATE FORWARD
+		if [ ! -z "${EMAILPASS}" ]; then
+			EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
+			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
+			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
+			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
+		fi
+		
 	done
 }
 
