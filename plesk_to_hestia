@@ -90,10 +90,9 @@ HEVE_DB() {
 	printf "%sINFO:%s Copy db.conf to remote\n" $GREEN $COLOROFF
 	$RSYNC $BACKUPDIR/${PLESKSUS}/DBS/db.conf root@${IP}:/usr/local/${PANEL}/data/users/${USER}/db.conf |
 	while read sk_file_dm; do
-		sk_sync=$((sk_sync+1))
-		echo -en "-- $sk_sync db.conf sent\r"
+		echo -en "-- $sk_file_dm\r"
 	done
-	echo " "
+	echo " \n"
 	$SSH ${PANELBIN}v-rebuild-databases $USER
 	rm -f $BACKUPDIR/${PLESKSUS}/DBS/db.conf
 	printf "%sINFO:%s Trasfering and Restoring databases.\n" $GREEN $COLOROFF
@@ -121,9 +120,9 @@ HEVE_DB() {
 	while read sk_file_dm; do
 		echo -en "-- $sk_file_dm\r"
 	done
-	echo " "
+	echo " \n"
 	
-	printf "%sWARN:%s DBS migrated, please run  in %s:\n bash fix-db-relation %s" $YEL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YEL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 	printf "This will FIX database name and user in most common CMS\n"
 	
 }
