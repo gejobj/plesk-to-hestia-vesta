@@ -137,7 +137,11 @@ HEVE_MAIL() {
 		EMAILPASS=$(/usr/local/psa/admin/bin/mail_auth_view | awk -v EMAIL="$EMAIL" '$2 ~ EMAIL { print $5 }')
 		# IF EMAILPASS -> Email forward
 		if [ -z "${EMAILPASS}" ]; then
-			printf "%sINFO:%s Creating email redirect %s\n" $GREEN $COLOROFF $EMAIL
+			GEN_PASS
+			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
+			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
+			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
+			printf "%sINFO:%s Creating email forward %s\n" $GREEN $COLOROFF $EMAIL
 			EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
 			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
