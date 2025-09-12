@@ -15,7 +15,6 @@ COLOROFF=$(tput sgr0)
 FIX_USER=NO # This chop user to 8 caracteres and remove characters ._-
 TIME=$(date +%T)
 DATE=$(date +%F)
-SSH="ssh -p $SSHPORT -oStrictHostKeyChecking=no -oConnectTimeout=10 -oBatchMode=yes root@${IP}"
 RSYNC="rsync -av"
 REMOTE_MYSQL='/usr/bin/mariadb'
 
@@ -266,6 +265,7 @@ fi
 PLESKSUS=$2
 IP=$3
 USER=${4:-pleskuser}
+SSH="ssh -p $SSHPORT -oStrictHostKeyChecking=no -oConnectTimeout=10 -oBatchMode=yes root@${IP}"
 
 if [[ ! -d "$BACKUPDIR" ]]; then
     mkdir -p "BACKUPDIR"
