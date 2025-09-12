@@ -251,7 +251,11 @@ TRANSFER () {
 	if test -f /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix; then
 	
 		printf "%sTransfer DB Relation Files to %s %s\n" $YELL $IP $COLOROFF
-		$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root
+		$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root |
+		while read sk_file_dm; do
+			echo -en "-- $sk_file_dm\r"
+		done
+		echo " \n"
 		
 		printf "%s###################\n" $RED
 		printf "DBS migrated, please run fix-db-relation in %s: bash fix-db-relation %s\n" $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
