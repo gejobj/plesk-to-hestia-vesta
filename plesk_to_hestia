@@ -275,6 +275,9 @@ TRANSFER () {
 		printf "################### %s\n" $COLOROFF
 	
 	fi
+	
+	# UPDATE USED DISK SPACE
+	$SSH ${PANELBIN}v-update-sys-queue disk
 }
 
 
