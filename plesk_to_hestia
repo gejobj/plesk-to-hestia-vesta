@@ -48,13 +48,8 @@ CHECK_STATUS(){
 }
 
 GEN_PASS() {
-    MATRIX='0123456789ABCDEFGHIJKLMNOP@QRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
     LENGTH=10
-    while [ ${n:=1} -le $LENGTH ]; do
-        PASS="$PASS${MATRIX:$(($RANDOM%${#MATRIX})):1}"
-        let n+=1
-    done
-    PASS=$(echo $PASS)
+	PASS=$(tr -dc 'A-Za-z0-9!?%=_.' < /dev/urandom | head -c $LENGTH)
 }
 
 HEVE_DB() {
@@ -122,7 +117,7 @@ HEVE_DB() {
 	done
 	echo " \n"
 	
-	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YEL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YELL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 	printf "This will FIX database name and user in most common CMS\n"
 	
 	echo ""
@@ -147,7 +142,7 @@ HEVE_MAIL() {
 		
 		if [ -z "${EMAILPASSSTR}" ]; then
 			GEN_PASS
-			printf "%sWARN:%s  -> with random pass: %s\n" $YEL $COLOROFF $PASS
+			printf "%sWARN:%s with random pass: %s\n" $YELL $COLOROFF $PASS
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		else
@@ -204,7 +199,7 @@ HEVE_SUBS() {
 	for SUB in $SUBS
 	do
 		if plesk bin subscription -l |grep $SUB; then
-			printf "%sWARN:%s Subdomain %s is also a subscription, SKIP... Subscriptions have to be migrated independently \n" $YEL $COLOROFF $SUB
+			printf "%sWARN:%s Subdomain %s is also a subscription, SKIP... Subscriptions have to be migrated independently \n" $YELL $COLOROFF $SUB
 		else
 			FILESIN=$(plesk bin subscription --info $SUB |awk ' $1 == "--WWW-Root--:" { print $2 }')
 			HEVE_DOMAIN $USER $SUB $PLESKSUS
@@ -249,7 +244,7 @@ TRANSFER () {
 	printf "%sINFO:%s FOUND %s emails accounts in %s\n" $GREEN $COLOROFF $EMAILSCOUNT $PLESKSUS
 	MAILMAN=$(plesk bin subscription --info $PLESKSUS |grep "Mailing list service:" | awk '{ print $4 }')
 	if [[ $MAILMAN == On ]]; then
-		printf "%sWARN%s detect this account have MAILMAN enabled, this not be copied\n" $YEL $COLOROFF
+		printf "%sWARN%s detect this account have MAILMAN enabled, this not be copied\n" $YELL $COLOROFF
 	fi
 	if [[ $USER =~ pleskuser ]]; then
 		USER=$(plesk bin subscription --info $PLESKSUS |grep "FTP Login:" | awk '{ print $3 }')
