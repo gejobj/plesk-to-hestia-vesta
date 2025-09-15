@@ -37,7 +37,7 @@ CHECK_STATUS(){
 		CODE=0
 	fi
 	if [[ $STATUS == $CODE ]]; then
-		printf "%sINFO:%s No errors for %s \n" $GREEN $COLOROFF  $FUNC
+		printf "%sINFO:%s No errors for %s \n" $GREEN $COLOROFF $FUNC
 	else
 		printf "%sERROR:%s in %s \n" $RED $COLOROFF $FUNC
 		if [[ $FUNC == CHECK-REMOTE-USER ]] || [[ $FUNC == ADD-REMOTE-USER ]]; then
@@ -49,7 +49,7 @@ CHECK_STATUS(){
 
 GEN_PASS() {
     LENGTH=10
-	PASS=$(tr -dc 'A-Za-z0-9!?%=_.' < /dev/urandom | head -c $LENGTH)
+	PASS=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c $LENGTH)
 }
 
 HEVE_DB() {
@@ -60,10 +60,10 @@ HEVE_DB() {
 	mkdir -p $BACKUPDIR/${PLESKSUS}/DBS
 	#GET List of DBS added in suscription
 	DBS=$(plesk db "select db.name as 'Database',d.name as 'Subscription',c.pname as 'Owner',c.login as 'Customer Username' from data_bases db,domains d,clients c where d.cl_id=c.id and db.dom_id=d.id" | awk -v PLESKSUS=$PLESKSUS '$4 == PLESKSUS { print $2 }')
-	printf "%sINFO:%s Start Databases Backups\n" $GREN $COLOROFF
+	printf "%sINFO:%s Start Databases Backups\n" $GREEN $COLOROFF
 	for DB in $DBS
 	do
-		printf "%sINFO:%s Dump database %s\n" $GREEN $COLOROFF $DB
+		printf "%sINFO:%s Dump database: %s\n" $GREEN $COLOROFF $DB
 		#BAD NEWS dump -n remove CREATE DATABASE Option but not USE DATABASE
 		# So as we need change database name in remote server we need
 		# fix that with sed after I not found any option to remove --databases from db dump ( we can use mysqldump directly )
@@ -87,7 +87,7 @@ HEVE_DB() {
 	while read sk_file_dm; do
 		echo -en "-- $sk_file_dm\r"
 	done
-	echo " \n"
+	echo " "
 	$SSH ${PANELBIN}v-rebuild-databases $USER
 	rm -f $BACKUPDIR/${PLESKSUS}/DBS/db.conf
 	printf "%sINFO:%s Trasfering and Restoring databases.\n" $GREEN $COLOROFF
@@ -115,7 +115,7 @@ HEVE_DB() {
 	while read sk_file_dm; do
 		echo -en "-- $sk_file_dm\r"
 	done
-	echo " \n"
+	echo " "
 	
 	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YELL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 	printf "This will FIX database name and user in most common CMS\n"
@@ -149,12 +149,13 @@ HEVE_MAIL() {
 			EMAILENCPASS=$(echo $EMAILPASSSTR | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
 			EMAILIVHEX=$(echo $EMAILPASSSTR | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
 			EMAILPASS=$(echo $EMAILENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$EMAILIVHEX" | tr -d '\0')
-			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $EMAILPASS"
+			printf "%sWARN:%s with pass: %s\n" $YELL $COLOROFF $EMAILPASS
+			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL '$EMAILPASS'"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		fi
 		
 		EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
-		if [ -z "${EMAILPASS}" ]; then
+		if [ ! -z "${EMAILFORWARD}" ]; then
 			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
 			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
