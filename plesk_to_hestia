@@ -125,16 +125,18 @@ HEVE_DB() {
 	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YEL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 	printf "This will FIX database name and user in most common CMS\n"
 	
+	echo ""
 }
 
 HEVE_MAIL() {
 	MAILSIN=/var/qmail/mailnames/
 	EMAILS=$(plesk db "select concat(m.mail_name,'@',d.name) as mail, a.password from domains d, mail m, accounts a where m.dom_id=d.id and m.account_id=a.id and d.name='$PLESKSUS';" | grep "@" | awk '{ print $2"|"$4 }' | sed 's/||/|/g')
+	ARREMAILS=( $( echo "$EMAILS" ) )
 	PLESKKEYHEX=$(cat /etc/psa/private/secret_key | xxd -p | tr -d '\n')
 	printf "\n%sINFO:%s Start with eMail accounts\n" $GREEN $COLOROFF
 	COUNT=0
 	
-	echo "$EMAILS" | while read -r LINEEMAIL
+	for LINEEMAIL in "${ARREMAILS[@]}";
 	do
 		COUNT=$((COUNT + 1))
 		EMAIL=$(echo $LINEEMAIL | awk -F '|' '{ print $1 }' | tr -d '[:space:]')
@@ -142,15 +144,16 @@ HEVE_MAIL() {
 		EMAILPASSSTR=$(echo $LINEEMAIL | awk -F '|' '{ print $2 }' | tr -d '[:space:]')
 		
 		printf "%sINFO:%s Creating [%d/%d] : %s\n" $GREEN $COLOROFF $COUNT $EMAILSCOUNT $EMAIL
+		
 		if [ -z "${EMAILPASSSTR}" ]; then
 			GEN_PASS
-			printf "%sINFO:%s with random pass: %s\n" $GREEN $COLOROFF $PASS
+			printf "%sWARN:%s  -> with random pass: %s\n" $YEL $COLOROFF $PASS
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		else
 			EMAILENCPASS=$(echo $EMAILPASSSTR | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
 			EMAILIVHEX=$(echo $EMAILPASSSTR | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
-			EMAILPASS=$(echo ${EMAILENCPASS} | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$EMAILIVHEX" | tr -d '\0')
+			EMAILPASS=$(echo $EMAILENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$EMAILIVHEX" | tr -d '\0')
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $EMAILPASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		fi
@@ -173,7 +176,10 @@ HEVE_MAIL() {
 			echo " "
 			$SSH "chown ${USER}:mail /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ -R"
 		fi
+		
 	done
+	
+	echo ""
 }
 
 HEVE_DOMAIN(){
@@ -204,6 +210,8 @@ HEVE_SUBS() {
 			HEVE_DOMAIN $USER $SUB $PLESKSUS
 		fi
 	done
+	
+	echo ""
 }
 
 FIX_USER(){
@@ -215,6 +223,7 @@ FIX_USER(){
 	else
 		printf "%sINFO:%s User %s is valid\n" $GREEN $COLOROFF $USER
 	fi
+	echo ""
 }
 
 TRANSFER () {
