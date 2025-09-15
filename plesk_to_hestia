@@ -261,7 +261,7 @@ TRANSFER () {
 		$SSH grep -w $USER /etc/passwd
 		CHECK_STATUS $? "CHECK-REMOTE-USER" "NO"
 	fi
-	printf "%sINFO%s: Add user %s in %s \n"  $GREEN $COLOROFF $USER $IP
+	printf "%sINFO:%s Add user %s in %s \n"  $GREEN $COLOROFF $USER $IP
 	## TODO Ask for email user
 	# TODO Get suscription password for now get aleatory
 	GEN_PASS
