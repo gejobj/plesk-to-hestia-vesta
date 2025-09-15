@@ -129,31 +129,42 @@ HEVE_DB() {
 
 HEVE_MAIL() {
 	MAILSIN=/var/qmail/mailnames/
-	EMAILS=$(plesk bin mail -l | grep "$PLESKSUS" | awk -v PLESKSUS="$PLESKSUS" '$3 ~ "@"domain { print $3 }')
+	EMAILS=$(plesk db "select concat(m.mail_name,'@',d.name) as mail, a.password from domains d, mail m, accounts a where m.dom_id=d.id and m.account_id=a.id and d.name='$PLESKSUS';" | grep "@" | awk '{ print $2"|"$4 }' | sed 's/||/|/g')
+	PLESKKEYHEX=$(cat /etc/psa/private/secret_key | xxd -p | tr -d '\n')
 	printf "\n%sINFO:%s Start with eMail accounts\n" $GREEN $COLOROFF
-	for EMAIL in $EMAILS
+	COUNT=0
+	
+	echo "$EMAILS" | while read -r LINEEMAIL
 	do
-		USERMAIL=$(echo $EMAIL | awk -F '@' '{ print $1 }')
-		EMAILPASS=$(/usr/local/psa/admin/bin/mail_auth_view | awk -v EMAIL="$EMAIL" '$2 ~ EMAIL { print $5 }')
-		HAS_MAILBOX=$(plesk bin mail --info $EMAIL | grep "^Mailbox" | awk '{ print $2 }')
-		HAS_FORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
+		COUNT=$((COUNT + 1))
+		EMAIL=$(echo $LINEEMAIL | awk -F '|' '{ print $1 }' | tr -d '[:space:]')
+		USERMAIL=$(echo $EMAIL | awk -F '@' '{ print $1 }' | tr -d '[:space:]')
+		EMAILPASSSTR=$(echo $LINEEMAIL | awk -F '|' '{ print $2 }' | tr -d '[:space:]')
 		
-		# IF EMAILPASS EMPTY
-		if [ -z "${EMAILPASS}" ]; then
+		printf "%sINFO:%s Creating [%d/%d] : %s\n" $GREEN $COLOROFF $COUNT $EMAILSCOUNT $EMAIL
+		if [ -z "${EMAILPASSSTR}" ]; then
 			GEN_PASS
-			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
+			printf "%sINFO:%s with random pass: %s\n" $GREEN $COLOROFF $PASS
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $PASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		else
-			printf "%sINFO:%s Creating %s\n" $GREEN $COLOROFF $EMAIL
+			EMAILENCPASS=$(echo $EMAILPASSSTR | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
+			EMAILIVHEX=$(echo $EMAILPASSSTR | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
+			EMAILPASS=$(echo ${EMAILENCPASS} | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$EMAILIVHEX" | tr -d '\0')
 			$SSH "${PANELBIN}v-add-mail-account $USER $PLESKSUS $USERMAIL $EMAILPASS"
 			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
 		fi
 		
-		# SYNC EMAILS
-		if [ $HAS_MAILBOX == "true" ]; then
+		EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
+		if [ -z "${EMAILPASS}" ]; then
+			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
+			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
+			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
+		fi
+		
+		EMAILMAILBOX=$(plesk bin mail --info $EMAIL | grep "^Mailbox" | awk '{ print $2 }')
+		if [ "${EMAILMAILBOX}" == "true" ]; then
 			printf "%sINFO:%s Sync %s@%s\n" $GREEN $COLOROFF $USERMAIL $PLESKSUS
-			#/home/tr43dsd/mail/barcelonabeach.net/fortls
 			$RSYNC ${MAILSIN}${PLESKSUS}/${USERMAIL}/Maildir/ root@${IP}:/home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ 2>&1 |
 			while read sk_file_dm; do
 				sk_sync=$((sk_sync+1))
@@ -162,15 +173,6 @@ HEVE_MAIL() {
 			echo " "
 			$SSH "chown ${USER}:mail /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ -R"
 		fi
-		
-		# CREATE FORWARD
-		if [ ! -z "${EMAILPASS}" ]; then
-			EMAILFORWARD=$(plesk bin mail --info $EMAIL | grep "^Group member" | awk '{ print $3 }')
-			printf "%sINFO:%s Creating email forward: %s -> %s\n" $GREEN $COLOROFF $EMAIL $EMAILFORWARD
-			$SSH "${PANELBIN}v-add-mail-account-forward $USER $PLESKSUS $USERMAIL $EMAILFORWARD"
-			CHECK_STATUS $? "CREATE-EMAIL-ACCOUNT" "YES"
-		fi
-		
 	done
 }
 
@@ -233,7 +235,8 @@ TRANSFER () {
 	
 	printf "%sINFO:%s CHECK FOR EMAILS.\n" $GREEN $COLOROFF
 	#Get Mail accounts from domain
-	EMAILSCOUNT=$(plesk bin subscription --info $PLESKSUS |awk ' $1 == "Mailboxes:" { print $2 }')
+	#EMAILSCOUNT=$(plesk bin subscription --info $PLESKSUS |awk ' $1 == "Mailboxes:" { print $2 }')
+	EMAILSCOUNT=$(plesk db "select concat(m.mail_name,'@',d.name) as mail, a.password from domains d, mail m, accounts a where m.dom_id=d.id and m.account_id=a.id and d.name='$PLESKSUS';" | grep "@" | wc -l)
 	printf "%sINFO:%s FOUND %s emails accounts in %s\n" $GREEN $COLOROFF $EMAILSCOUNT $PLESKSUS
 	MAILMAN=$(plesk bin subscription --info $PLESKSUS |grep "Mailing list service:" | awk '{ print $4 }')
 	if [[ $MAILMAN == On ]]; then
