@@ -179,7 +179,7 @@ HEVE_MAIL() {
 }
 
 HEVE_DOMAIN(){
-	printf "%sINFO:%s Start with websites\n" $GREEN $COLOROFF
+	#printf "%sINFO:%s Start with websites\n" $GREEN $COLOROFF
 	printf "%sINFO:%s Adding domain %s in remote server\n" $GREEN $COLOROFF $PLESKSUS
 	$SSH ${PANELBIN}v-add-domain $USER $PLESKSUS
 	CHECK_STATUS $? "ADD-REMOTE-DOMAIN" "YES"
@@ -196,16 +196,32 @@ HEVE_SUBS() {
 	USER=$1
 	DOMAIN=$2
 	printf "%sINFO:%s Looking for subdomains\n" $GREEN $COLOROFF
-	SUBS=$(plesk bin subdomain -l |grep .$DOMAIN )
-	for SUB in $SUBS
-	do
-		if plesk bin subscription -l |grep $SUB; then
-			printf "%sWARN:%s Subdomain %s is also a subscription, SKIP... Subscriptions have to be migrated independently \n" $YELL $COLOROFF $SUB
-		else
-			FILESIN=$(plesk bin subscription --info $SUB |awk ' $1 == "--WWW-Root--:" { print $2 }')
-			HEVE_DOMAIN $USER $SUB $PLESKSUS
-		fi
-	done
+	SUBSNUM=$(plesk bin subdomain -l |grep .$DOMAIN | wc -l )
+	
+	if [ $SUBSNUM -gt 0 ]; then
+		
+		printf "%sINFO:%s subdomains found: %d \n" $GREEN $COLOROFF $SUBSNUM
+		SUBS=$(plesk bin subdomain -l |grep .$DOMAIN )
+		COUNT=0
+		
+		for SUB in $SUBS
+		do
+			COUNT=$((COUNT + 1))
+			printf "%sINFO:%s [%d/%d] Get some information from: %s\n" $GREEN $COLOROFF $COUNT $SUBSNUM $SUB
+			PLESKSUB=$(plesk bin subscription -l | grep $SUB)
+			
+			if [[ ! -z "$PLESKSUB" ]]; then
+				printf "%sWARN:%s Subdomain %s is also a subscription, SKIP... Subscriptions have to be migrated independently \n" $YELL $COLOROFF $SUB
+			else
+				FILESIN=$(plesk bin subscription --info $SUB |awk ' $1 == "--WWW-Root--:" { print $2 }')
+				PLESKSUS=$SUB
+				HEVE_DOMAIN $USER $PLESKSUS
+			fi
+		done
+	
+	else
+		printf "%sINFO:%s No subdomains found\n" $GREEN $COLOROFF
+	fi
 	
 	echo ""
 }
