@@ -189,6 +189,8 @@ HEVE_DOMAIN(){
 		sk_sync=$((sk_sync+1))
 		printf "\r%sINFO:%s Importing -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
 	done
+	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/public_html/* -R"
+	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/public_html/.* -R"
 	printf "\n"
 }
 
