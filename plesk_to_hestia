@@ -163,13 +163,32 @@ HEVE_MAIL() {
 		
 		EMAILMAILBOX=$(plesk bin mail --info $EMAIL | grep "^Mailbox" | awk '{ print $2 }')
 		if [ "${EMAILMAILBOX}" == "true" ]; then
-			printf "%sINFO:%s Sync %s@%s\n" $GREEN $COLOROFF $USERMAIL $PLESKSUS
+			printf "%sINFO:%s Sync Maildir %s@%s\n" $GREEN $COLOROFF $USERMAIL $PLESKSUS
 			$RSYNC ${MAILSIN}${PLESKSUS}/${USERMAIL}/Maildir/ root@${IP}:/home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ 2>&1 |
 			while read sk_file_dm; do
 				sk_sync=$((sk_sync+1))
-				echo -en "-- $sk_sync restored mails\r"
+				echo -en "      -- $sk_sync restored mails\r"
 			done
 			echo " "
+			
+			EMAILFILTERS=${MAILSIN}${PLESKSUS}/${USERMAIL}/.dovecot.sieve
+			if [ -f $EMAILFILTERS ]; then
+				
+				printf "%sINFO:%s Sync email filters\n" $GREEN $COLOROFF
+				$SSH "mkdir /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/sieve"
+				echo "require [\"fileinto\"];" > managesieve.sieve
+				cat $EMAILFILTERS | grep -v -e '^#' | grep -v -e '^require' >> managesieve.sieve
+				chmod 600 managesieve.sieve
+				$RSYNC managesieve.sieve root@${IP}:/home/${USER}/mail/${PLESKSUS}/${USERMAIL}/sieve 2>&1 |
+				while read sk_file_dm; do
+					echo -en "      -- restored mail filters\r"
+				done
+				echo " "
+				$SSH "chmod 700 /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/sieve"
+				$SSH "cd /home/${USER}/mail/${PLESKSUS}/${USERMAIL} && ln -s sieve/managesieve.sieve dovecot.sieve"
+				rm managesieve.sieve
+				
+			fi
 			$SSH "chown ${USER}:mail /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/ -R"
 		fi
 		
@@ -189,6 +208,8 @@ HEVE_DOMAIN(){
 		sk_sync=$((sk_sync+1))
 		printf "\r%sINFO:%s Importing -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
 	done
+	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/public_html/* -R"
+	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/public_html/.* -R"
 	printf "\n"
 }
 
@@ -308,14 +329,15 @@ TRANSFER () {
 		printf "%sTransfer DB Relation Files to %s %s\n" $YELL $IP $COLOROFF
 		$RSYNC /root/${PLESKSUS}-${PANEL}-DB-Relation-Fix root@${IP}:/root |
 		while read sk_file_dm; do
-			echo -en "-- $sk_file_dm\r"
+			echo -en "\r"
 		done
-		echo " \n"
+		echo " "
 		
 		printf "%s###################\n" $RED
 		printf "DBS migrated, please run fix-db-relation in %s: bash fix-db-relation %s\n" $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 		printf "This will FIX database name and user in most common CMS\n"
 		printf "################### %s\n" $COLOROFF
+		echo " "
 	
 	fi
 	
