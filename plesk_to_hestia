@@ -177,7 +177,7 @@ HEVE_MAIL() {
 				printf "%sINFO:%s Sync email filters\n" $GREEN $COLOROFF
 				$SSH "mkdir /home/${USER}/mail/${PLESKSUS}/${USERMAIL}/sieve"
 				echo "require [\"fileinto\"];" > managesieve.sieve
-				cat $EMAILFILTERS | grep -v -e '^#' | grep -v -e '^require' >> managesieve.sieve
+				cat $EMAILFILTERS | grep -v -e '^# Sieve Filter' | grep -v -e 'www.horde.org' | grep -v -e '^require' | sed -E "s/^# (.*)/# rule:[\1]/g" >> managesieve.sieve
 				chmod 600 managesieve.sieve
 				$RSYNC managesieve.sieve root@${IP}:/home/${USER}/mail/${PLESKSUS}/${USERMAIL}/sieve 2>&1 |
 				while read sk_file_dm; do
