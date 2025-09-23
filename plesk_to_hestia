@@ -52,6 +52,16 @@ GEN_PASS() {
 	PASS=$(tr -dc 'A-Za-z0-9!?%=' < /dev/urandom | head -c $LENGTH)
 }
 
+GET_PASSWD() {
+	ENCPASSWD=$(plesk db "SELECT accounts.password FROM sys_users LEFT JOIN accounts on sys_users.account_id=accounts.id WHERE login='$1' ORDER BY sys_users.home ASC;" | awk '{ print $2 }' | grep '^\$' )
+	
+	PLESKKEYHEX=$(cat /etc/psa/private/secret_key | xxd -p | tr -d '\n')
+	FTPIVHEX=$(echo "$ENCPASSWD" | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
+	FTPENCPASS=$(echo "$ENCPASSWD" | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
+	PASS=$(echo $FTPENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$FTPIVHEX" | tr -d '\0')
+	PASS=$(printf "%q" $PASS)
+}
+
 HEVE_DB() {
 	USER=$1
 	FILESIN=$3
@@ -93,9 +103,11 @@ HEVE_DB() {
 	printf "%sINFO:%s Trasfering and Restoring databases.\n" $GREEN $COLOROFF
 	$SSH mkdir -p /root/tmp_heve_transfer
 	CHECK_STATUS $? "CREATE_TMP_DB_DIR_REMOTE" "YES"
+	COUNT=0
 	for DB in $DBS
 	do
-		printf "%sINFO:%s Copy %s Database\n" $GREEN $COLOROFF $DB
+		COUNT=$((COUNT + 1))
+		printf "%sINFO:%s [%d/%d] Copy %s Database\n" $GREEN $COLOROFF $COUNT $DBSCOUNT $DB
 		$RSYNC --progress $BACKUPDIR/${PLESKSUS}/DBS/${USER}_${DB} root@${IP}:/root/tmp_heve_transfer |
 		while read sk_file_dm; do
 			echo -en "-- $sk_file_dm\r"
@@ -305,9 +317,11 @@ TRANSFER () {
 	printf "%sINFO:%s Add user %s in %s \n"  $GREEN $COLOROFF $USER $IP
 	## TODO Ask for email user
 	# TODO Get suscription password for now get aleatory
-	GEN_PASS
-	$SSH ${PANELBIN}v-add-user $USER $PASS "admin@${PLESKSUS}"
+	#GEN_PASS
+	GET_PASSWD $USER
+	$SSH ${PANELBIN}v-add-user $USER "$PASS" "admin@${PLESKSUS}"
 	CHECK_STATUS $? "ADD-REMOTE-USER" "yes"
+	printf "%sWARN:%s FTP user: %s | FTP password: %s\n" $YELL $COLOROFF $USER $PASS
 	
 	HEVE_DOMAIN $USER $PLESKSUS
 	
