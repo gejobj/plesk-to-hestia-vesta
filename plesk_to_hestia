@@ -129,9 +129,9 @@ HEVE_DB() {
 	done
 	echo " "
 	
-	printf "%sWARN:%s DBS migrated, please run in %s:\n bash fix-db-relation %s" $YELL $COLOROFF $IP "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
-	printf "This will FIX database name and user in most common CMS\n"
-	
+	printf "%sWARN:%s DBS migrated, please run in %s:" $YELL $COLOROFF $IP
+	printf "%sWARN:%s bash fix-db-relation %s" $YELL $COLOROFF "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	printf "%sWARN:%s This will FIX database name and user in most common CMS" $YELL $COLOROFF
 	echo ""
 }
 
@@ -224,6 +224,23 @@ HEVE_DOMAIN(){
 	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/public_html/.* -R"
 	$SSH "chown ${USER}:www-data /home/${USER}/web/${PLESKSUS}/public_html"
 	printf "\n"
+}
+
+HEVE_GIT(){
+	
+	printf "%sINFO:%s Found git directory: %s\n" $GREEN $COLOROFF "$FILESIN/../git"
+	
+	$SSH "mkdir /home/${USER}/web/${PLESKSUS}/git"
+	printf "%sINFO:%s Created remote git directory: %s\n" $GREEN $COLOROFF "/home/$USER/web/$PLESKSUS/git"
+	
+	$RSYNC $FILESIN/../git/ root@${IP}:/home/${USER}/web/${PLESKSUS}/git 2>&1 |
+	while read sk_file_dm; do
+		sk_sync=$((sk_sync+1))
+		printf "\r%sINFO:%s Importing git -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
+	done
+	$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/git -R"
+	printf "\n"
+	
 }
 
 HEVE_SUBS() {
@@ -324,6 +341,10 @@ TRANSFER () {
 	CHECK_STATUS $? "ADD-REMOTE-USER" "yes"
 	
 	HEVE_DOMAIN $USER $PLESKSUS
+	
+	if [[ -d "$FILESIN/../git" ]]; then
+		HEVE_GIT $FILESIN $PLESKSUS
+	fi
 	
 	if [[ $DBSCOUNT -gt 0 ]]; then
 		HEVE_DB $USER $PLESKSUS $FILESIN
