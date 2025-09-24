@@ -59,7 +59,7 @@ GET_PASSWD() {
 	FTPIVHEX=$(echo "$ENCPASSWD" | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
 	FTPENCPASS=$(echo "$ENCPASSWD" | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
 	PASS=$(echo $FTPENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$FTPIVHEX" | tr -d '\0')
-	PASS=$(printf "%q" $PASS)
+	#PASS=$(printf "%q" $PASS)
 }
 
 HEVE_DB() {
@@ -319,9 +319,9 @@ TRANSFER () {
 	# TODO Get suscription password for now get aleatory
 	#GEN_PASS
 	GET_PASSWD $USER
-	$SSH ${PANELBIN}v-add-user $USER "$PASS" "admin@${PLESKSUS}"
-	CHECK_STATUS $? "ADD-REMOTE-USER" "yes"
 	printf "%sWARN:%s FTP user: %s | FTP password: %s\n" $YELL $COLOROFF $USER $PASS
+	$SSH ${PANELBIN}v-add-user $USER "$(printf "%q" $PASS)" "admin@${PLESKSUS}"
+	CHECK_STATUS $? "ADD-REMOTE-USER" "yes"
 	
 	HEVE_DOMAIN $USER $PLESKSUS
 	
