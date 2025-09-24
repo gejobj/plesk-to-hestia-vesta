@@ -129,8 +129,8 @@ HEVE_DB() {
 	done
 	echo " "
 	
-	printf "%sWARN:%s DBS migrated, please run in %s:" $YELL $COLOROFF $IP
-	printf "%sWARN:%s bash fix-db-relation %s" $YELL $COLOROFF "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
+	printf "%sWARN:%s DBS migrated, please run in %s:\n" $YELL $COLOROFF $IP
+	printf "%sWARN:%s bash fix-db-relation %s\n" $YELL $COLOROFF "/root/${PLESKSUS}-${PANEL}-DB-Relation-Fix"
 	printf "%sWARN:%s This will FIX database name and user in most common CMS" $YELL $COLOROFF
 	echo ""
 }
