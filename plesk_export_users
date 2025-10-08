@@ -1,0 +1,67 @@
+#!/bin/bash
+# Export users to txt
+# By Gerardo J Bueno
+# Run By Your OWN RISK ALPHA RELEASE
+
+GREEN=$(tput setaf 2)
+RED=$(tput setaf 1)
+YELL=$(tput setaf 3)
+COLOROFF=$(tput sgr0)
+PLESKKEYHEX=$(cat /etc/psa/private/secret_key | xxd -p | tr -d '\n')
+FTPUSERSFILE="plesk_ftpusers.txt"
+EMAILUSERSFILE="plesk_emailusers.txt"
+
+EXPORT_FTP_USERS () {
+	
+	FTPUSERS=$(plesk db -N -e "SELECT REPLACE(sys_users.home,'/var/www/vhosts//','') AS domain, sys_users.login,accounts.password FROM sys_users LEFT JOIN accounts on sys_users.account_id=accounts.id ORDER BY sys_users.home ASC;")
+	printf "%sINFO:%s Exporting FTP users to file: %s\n" $GREEN $COLOROFF $FTPUSERSFILE
+	
+	echo "$FTPUSERS" | while read LINE; do
+	
+		USERDIR=$(echo "$LINE" | awk '{ print $1 }' | tr -d '\n')
+		USERNAME=$(echo "$LINE" | awk '{ print $2 }' | tr -d '\n')
+		USERPASS=$(echo "$LINE" | awk '{ print $3 }' | tr -d '\n')
+		
+		FTPIVHEX=$(echo "$USERPASS" | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
+		FTPENCPASS=$(echo "$USERPASS" | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
+		PASS=$(echo $FTPENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$FTPIVHEX" | tr -d '\0')
+		
+		echo "$USERDIR $USERNAME $PASS"
+		
+	#done | column -t | tee $FTPUSERSFILE
+	done | column -t > $FTPUSERSFILE
+	
+}
+
+EXPORT_EMAIL_USERS () {
+	
+	EMAILUSERS=$(plesk db -N -e "SELECT CONCAT(mail_name,'@',name) as email_address, accounts.password FROM mail LEFT JOIN domains on domains.id=mail.dom_id LEFT JOIN accounts on accounts.id=mail.account_id;")
+	
+	
+	printf "%sINFO:%s Exporting EMAIL users to file: %s\n" $GREEN $COLOROFF $EMAILUSERSFILE
+	
+	echo "$EMAILUSERS" | while read LINE; do
+	
+		USEREMAIL=$(echo "$LINE" | awk '{ print $1 }' | tr -d '\n')
+		USERPASS=$(echo "$LINE" | awk '{ print $2 }' | tr -d '\n')
+		
+		if [[ ! -z $USERPASS ]]; then
+			
+			FTPIVHEX=$(echo "$USERPASS" | awk -F '$' '{ print $3 }' | base64 -d | xxd -p | tr -d '\n')
+			FTPENCPASS=$(echo "$USERPASS" | awk -F '$' '{ print $4 }' | tr -d '[:space:]')
+			PASS=$(echo $FTPENCPASS | openssl enc -AES-128-CBC -nopad -a -d -K "$PLESKKEYHEX" -iv "$FTPIVHEX" | tr -d '\0')
+		
+		else
+			PASS=""
+		fi
+		
+		echo "$USEREMAIL $PASS"
+		
+	#done | column -t | tee $EMAILUSERSFILE
+	done | column -t > $EMAILUSERSFILE
+	
+}
+
+
+EXPORT_FTP_USERS
+EXPORT_EMAIL_USERS
