@@ -245,7 +245,7 @@ HEVE_GIT(){
 	
 	if [[ ! -z $PLESKGITNAME ]]; then
 		
-		PLESKDOM=$(plesk ext git --info -domain $PLESKSUS -name $PLESKGITNAME | grep 'Domain name' | rev | cut -d. -f2,1 | rev)
+		PLESKDOM=$(plesk ext git --info -domain $PLESKSUS -name $PLESKGITNAME | grep 'Domain name:' | cut -d: -f2 | tr -d ' ' | rev | cut -d. -f2,1 | rev)
 		
 		if [[ -d /var/www/vhosts/${PLESKDOM}/git/${PLESKGITNAME} ]]; then
 			$RSYNC /var/www/vhosts/${PLESKDOM}/git/${PLESKGITNAME} root@${IP}:/home/${USER}/web/${PLESKSUS}/git 2>&1 |
@@ -254,6 +254,8 @@ HEVE_GIT(){
 				printf "\r%sINFO:%s Importing git -- %s files"  "$GREEN" "$COLOROFF" "$sk_sync"
 			done
 			$SSH "chown ${USER}:${USER} /home/${USER}/web/${PLESKSUS}/git -R"
+		else
+			printf "%sERROR:%s git directory %s not synced \n" $RED $COLOROFF "/var/www/vhosts/${PLESKDOM}/git/${PLESKGITNAME}"
 		fi
 		
 	fi
