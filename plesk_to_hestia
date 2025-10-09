@@ -402,6 +402,7 @@ TRANSFER () {
 	HEVE_SUBS $USER $PLESKSUS
 	
 	# UPDATE USED DISK SPACE
+	printf "%sINFO:%s Updating disk space \n"  $GREEN $COLOROFF
 	$SSH ${PANELBIN}v-update-sys-queue disk
 }
 
