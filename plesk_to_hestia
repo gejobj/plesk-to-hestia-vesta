@@ -272,7 +272,7 @@ HEVE_SUBS() {
 	if [ $SUBSNUM -gt 0 ]; then
 		
 		printf "%sINFO:%s subdomains found: %d \n" $GREEN $COLOROFF $SUBSNUM
-		SUBS=$(plesk bin subdomain -l |grep .$DOMAIN )
+		SUBS=$(plesk bin subdomain -l | grep "\.$DOMAIN" )
 		COUNT=0
 		
 		for SUB in $SUBS
