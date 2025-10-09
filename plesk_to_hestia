@@ -266,8 +266,8 @@ HEVE_GIT(){
 HEVE_SUBS() {
 	USER=$1
 	DOMAIN=$2
-	printf "%sINFO:%s Looking for subdomains\n" $GREEN $COLOROFF
-	SUBSNUM=$(plesk bin subdomain -l |grep .$DOMAIN | wc -l )
+	printf "%sINFO:%s Looking for subdomains\n" $GREEN $COLOROFF 
+	SUBSNUM=$(plesk bin subdomain -l | grep "\.$DOMAIN" | wc -l )
 	
 	if [ $SUBSNUM -gt 0 ]; then
 		
@@ -314,7 +314,7 @@ FIX_USER(){
 }
 
 TRANSFER () {
-	SUBEXIST=$(plesk bin subscription --list | grep -w $PLESKSUS | wc -l)
+	SUBEXIST=$(plesk bin subscription --list | grep -w -E "^$PLESKSUS$" | wc -l)
 	if [ $SUBEXIST -ne 1 ] ; then
 		printf "%sERROR:%s subscription %s not found in this server \n" $RED $COLOROFF $PLESKSUS
 		exit 2
